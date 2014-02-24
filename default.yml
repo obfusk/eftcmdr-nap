@@ -42,14 +42,14 @@ _hist: &_hist                                                   # {{{1
   tag:              hist
   text:             history
   then:
-    ask:            ask_lines
-    text:           How many lines?
+    ask:            ask_commits
+    text:           How many commits?
     default:        100
     validate:       \A\d+\z
     then:
       eval:         eval_nap_hist
       code: |
-        osh! 'nap log "$1" hist "$2" -v', app, ctx[:ask_lines]
+        osh! 'nap log "$1" hist "$2" -v', app, ctx[:ask_commits]
                                                                 # }}}1
 
 _console: &_console                                             # {{{1
