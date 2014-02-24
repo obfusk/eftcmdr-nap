@@ -8,6 +8,24 @@
   end]
 %>
 
+_stat: &_stat                                                   # {{{1
+  tag:              stat
+  text:             status
+  then:
+    eval:           eval_nap_status
+    code: |
+      osh! 'nap status "$1"', app
+                                                                # }}}1
+
+_info: &_info                                                   # {{{1
+  tag:              info
+  text:             info
+  then:
+    eval:           eval_nap_info
+    code: |
+      osh! 'nap info "$1"', app
+                                                                # }}}1
+
 _log: &_log                                                     # {{{1
   ask:              ask_lines
   text:             How many lines?
@@ -20,31 +38,18 @@ _log: &_log                                                     # {{{1
       osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
                                                                 # }}}1
 
-_stat: &_stat                                                   # {{{1
-  tag:              stat
-  text:             status
+_hist: &_hist                                                   # {{{1
+  tag:              hist
+  text:             history
   then:
-    eval:           eval_nap_status
-    code: |
-      osh! 'nap status "$1"', app
-                                                                # }}}1
-
-_start: &_start                                                 # {{{1
-  tag:              start
-  text:             start
-  then:
-    eval:           eval_nap_start
-    code: |
-      osh! 'nap start "$1"', app
-                                                                # }}}1
-
-_stop: &_stop                                                   # {{{1
-  tag:              stop
-  text:             stop
-  then:
-    eval:           eval_nap_stop
-    code: |
-      osh! 'nap stop "$1"', app
+    ask:            ask_lines
+    text:           How many lines?
+    default:        100
+    validate:       \A\d+\z
+    then:
+      eval:         eval_nap_hist
+      code: |
+        osh! 'nap log "$1" hist "$2" -v', app, ctx[:ask_lines]
                                                                 # }}}1
 
 _console: &_console                                             # {{{1
@@ -63,6 +68,24 @@ _psql: &_psql                                                   # {{{1
     eval:           eval_psql
     code: |
       osh! 'psql -h localhost -U "$1" "$1"', app, chdir: appdir
+                                                                # }}}1
+
+_start: &_start                                                 # {{{1
+  tag:              start
+  text:             start
+  then:
+    eval:           eval_nap_start
+    code: |
+      osh! 'nap start "$1"', app
+                                                                # }}}1
+
+_stop: &_stop                                                   # {{{1
+  tag:              stop
+  text:             stop
+  then:
+    eval:           eval_nap_stop
+    code: |
+      osh! 'nap stop "$1"', app
                                                                 # }}}1
 
 _reset: &_reset                                                 # {{{1
@@ -124,13 +147,12 @@ choices:
       text:         Choose a command to run
       choices:
       - *_stat
+      - *_info
       - *_logs_<%= x %>
+      - *_hist
       - *_console
       - *_psql
       - *_start
       - *_stop
       - *_reset
 <% end %>                                                       # }}}1
-
-# info: ->(x) { LINES[%x[ nap info #{x} -q ]] },
-# hist: ->(x, n) { LINES[%x[ nap log #{x} hist #{n} -v ]] },
