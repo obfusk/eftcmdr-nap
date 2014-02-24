@@ -1,6 +1,6 @@
 <%
   apps_file = file.sub(/\.yml\z/, '.apps')
-  apps      = File.exists?(apps) ? File.read(apps).split : []
+  apps      = File.exists?(apps_file) ? File.read(apps).split : []
   logs      = Hash[apps.map do |x|
     [x, Hash[%x[ nap log "#{x}" assoc ].lines
           .map { |l| l.chomp.split /\s+/, 2 }]]
