@@ -1,4 +1,4 @@
-<%
+<%                                                              # {{{1
   perms_file  = file.sub(/\.yml\z/, '.perms')
   apps_file   = file.sub(/\.yml\z/, '.apps')
   perms       = File.exists?(perms_file) ?
@@ -9,7 +9,7 @@
     [x, Hash[%x[ nap log #{x} assoc ].lines
           .map { |l| l.chomp.split /\s+/, 2 }]]
   end]
-%>
+%>                                                              # }}}1
 
 _stat: &_stat                                                   # {{{1
   tag:              stat
@@ -154,9 +154,11 @@ choices:
       - *_info
       - *_logs_<%= x %>
       - *_hist
+    <% if (perms & %w{ admin start_stop }).any? }  %>
       - *_start
       - *_stop
-    <% if perms.include? 'admin' %>
+    <% end %>
+    <% if (perms & %w{ admin }).any? }  %>
       - *_console
       - *_psql
       - *_reset
