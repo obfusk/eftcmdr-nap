@@ -20,6 +20,46 @@ _log: &_log                                                     # {{{1
         app, ctx[:ask_lines], logfile
                                                                 # }}}1
 
+_console: &_console                                             # {{{1
+  tag:              console
+  text:             rails console
+  then:
+    eval:           eval_rails_console
+    code: |
+      osh! 'echo cd "$1"; echo RAILS_ENV=production bundle exec rails c',
+        app, exit: true
+                                                                # }}}1
+
+_psql: &_psql                                                   # {{{1
+  tag:              psql
+  text:             postgresql console
+  then:
+    eval:           eval_psql
+    code: |
+      osh! 'echo psql -h localhost -U "$1" "$1"', app
+                                                                # }}}1
+
+_reset: &_reset                                                 # {{{1
+  tag:              reset
+  text:             git reset
+  then:
+    show_text:      show_text_git_status
+    code: |
+      oshc!('echo cd "$1"; echo git fetch --all; echo git status',
+        app, merge: true, exit: true).stdout
+    then:
+      ask_yesno:    ask_yesno_git_reset
+      text:         Are you sure?
+      then:
+        eval:       eval_git_reset
+        code: |
+          osh! 'echo cd "$1"; echo git reset --hard', app, exit: true
+      else:
+        eval:       eval_git_reset_cancelled
+        code: |
+          ohai 'git reset cancelled'
+                                                                # }}}1
+
 <% apps.each do |x| %>                                          # {{{1
 _logs_<%= x %>: &_logs_<%= x %>
   tag:              log
@@ -61,46 +101,6 @@ choices:
       - *_psql
       - *_reset
 <% end %>                                                       # }}}1
-
-_console: &_console                                             # {{{1
-  tag:              console
-  text:             rails console
-  then:
-    eval:           eval_rails_console
-    code: |
-      osh! 'echo cd "$1"; echo RAILS_ENV=production bundle exec rails c',
-        app, exit: true
-                                                                # }}}1
-
-_psql: &_psql                                                   # {{{1
-  tag:              psql
-  text:             postgresql console
-  then:
-    eval:           eval_psql
-    code: |
-      osh! 'echo psql -h localhost -U "$1" "$1"', app
-                                                                # }}}1
-
-_reset: &_reset                                                 # {{{1
-  tag:              reset
-  text:             git reset
-  then:
-    show_text:      show_text_git_status
-    code: |
-      oshc!('echo cd "$1"; echo git fetch --all; echo git status',
-        app, merge: true, exit: true).stdout
-    then:
-      ask_yesno:    ask_yesno_git_reset
-      text:         Are you sure?
-      then:
-        eval:       eval_git_reset
-        code: |
-          osh! 'echo cd "$1"; echo git reset --hard', app, exit: true
-      else:
-        eval:       eval_git_reset_cancelled
-        code: |
-          ohai 'git reset cancelled'
-                                                                # }}}1
 
 # list: ->() { %x[ naps list ].split },
 # stat: ->(x) { %x[ nap status #{x} -s ].strip.split ' ', 2 },
