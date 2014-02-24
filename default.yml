@@ -30,8 +30,8 @@ _logs_<%= x %>: &_logs_<%= x %>
     text:           Choose a log file to view
     choices:
     <% logs[x].each_pair do |n,f| %>
-      - tag:        <%= n %>
-        text:       <%= f %>
+      - tag:        <%= n.inspect %>
+        text:       <%= f.inspect %>
         then:
           eval:     eval_logfile
           code: |
