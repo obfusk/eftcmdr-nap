@@ -9,12 +9,12 @@
 %>
 
 _log: &_log                                                     # {{{1
-  ask:          ask_lines
-  text:         How many lines?
-  default:      100
-  validate:     \A\d+\z
+  ask:              ask_lines
+  text:             How many lines?
+  default:          100
+  validate:         \A\d+\z
   then:
-    eval:       eval_view_log
+    eval:           eval_view_log
     code: |
       osh! 'echo cd "$1" && echo tail -f -n "$2" "$3"',
         app, ctx[:ask_lines], logfile
@@ -36,7 +36,7 @@ _logs_<%= x %>: &_logs_<%= x %>
           eval:     eval_logfile
           code: |
             logfile = logs[app][ctx[:menu_logs][:tag]]
-          then: &_log
+          then: *_log
     <% end %>
 <% end %>                                                       # }}}1
 
