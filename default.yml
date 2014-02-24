@@ -154,11 +154,11 @@ choices:
       - *_info
       - *_logs_<%= x %>
       - *_hist
-    <% if (perms & %w{ admin start_stop }).any? }  %>
+    <% if (perms & %w{ admin start_stop }).any? %>
       - *_start
       - *_stop
     <% end %>
-    <% if (perms & %w{ admin }).any? }  %>
+    <% if (perms & %w{ admin }).any? %>
       - *_console
       - *_psql
       - *_reset
