@@ -56,10 +56,10 @@ choices:
       title:        commands
       text:         Choose a command to run
       choices:
-      - &_logs_<%= x %>
-      - &_console
-      - &_psql
-      - &_reset
+      - *_logs_<%= x %>
+      - *_console
+      - *_psql
+      - *_reset
 <% end %>                                                       # }}}1
 
 _console: &_console                                             # {{{1
