@@ -97,6 +97,7 @@ _reset: &_reset                                                 # {{{1
   text:             git reset
   then:
     show_text:      show_text_git_status
+    scroll:         true
     code: |
       oshc!('git fetch --all; git status',
         merge: true, exit: true, chdir: appdir).stdout
