@@ -16,6 +16,7 @@ _log: &_log                                                     # {{{1
   then:
     eval:           eval_view_log
     code: |
+      trap('INT') { ohai 'bye' }
       osh! 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
                                                                 # }}}1
 
