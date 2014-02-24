@@ -49,7 +49,8 @@ _hist: &_hist                                                   # {{{1
     then:
       eval:         eval_nap_hist
       code: |
-        osh! 'nap log "$1" hist "$2" -v', app, ctx[:ask_commits]
+        osh! 'nap log "$1" hist "$2" -v', app, ctx[:ask_commits],
+          in: '/dev/null'
                                                                 # }}}1
 
 _console: &_console                                             # {{{1
