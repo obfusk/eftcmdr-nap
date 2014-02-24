@@ -3,7 +3,7 @@
   apps      = File.exists?(apps_file) ?
                 File.read(apps_file).split : []
   logs      = Hash[apps.map do |x|
-    [x, Hash[%x[ nap log "#{x}" assoc ].lines
+    [x, Hash[%x[ nap log #{x} assoc ].lines
           .map { |l| l.chomp.split /\s+/, 2 }]]
   end]
 %>
@@ -16,8 +16,7 @@ _log: &_log                                                     # {{{1
   then:
     eval:           eval_view_log
     code: |
-      osh! 'echo cd "$1" && echo tail -f -n "$2" "$3"',
-        app, ctx[:ask_lines], logfile
+      osh! 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
                                                                 # }}}1
 
 _console: &_console                                             # {{{1
@@ -26,8 +25,7 @@ _console: &_console                                             # {{{1
   then:
     eval:           eval_rails_console
     code: |
-      osh! 'echo cd "$1"; echo RAILS_ENV=production bundle exec rails c',
-        app, exit: true
+      osh! 'RAILS_ENV=production bundle exec rails c', chdir: appdir
                                                                 # }}}1
 
 _psql: &_psql                                                   # {{{1
@@ -36,7 +34,7 @@ _psql: &_psql                                                   # {{{1
   then:
     eval:           eval_psql
     code: |
-      osh! 'echo psql -h localhost -U "$1" "$1"', app
+      osh! 'psql -h localhost -U "$1" "$1"', app, chdir: appdir
                                                                 # }}}1
 
 _reset: &_reset                                                 # {{{1
@@ -45,15 +43,15 @@ _reset: &_reset                                                 # {{{1
   then:
     show_text:      show_text_git_status
     code: |
-      oshc!('echo cd "$1"; echo git fetch --all; echo git status',
-        app, merge: true, exit: true).stdout
+      oshc!('git fetch --all; git status',
+        merge: true, exit: true, chdir: appdir).stdout
     then:
       ask_yesno:    ask_yesno_git_reset
       text:         Are you sure?
       then:
         eval:       eval_git_reset
         code: |
-          osh! 'echo cd "$1"; echo git reset --hard', app, exit: true
+          osh! 'git reset --hard', chdir: appdir
       else:
         eval:       eval_git_reset_cancelled
         code: |
@@ -86,11 +84,12 @@ text:               Choose an app
 choices:
 <% apps.each do |x| %>
 - tag:  <%= x %>
-  text: The <%= x %> app
+  text: <%= x %>
   then:
     eval:           eval_menu_apps
     code: |
-      app = ctx[:menu_apps][:tag]
+      app     = ctx[:menu_apps][:tag]
+      appdir  = "#{Dir.home}/#{app}/app"
     then:
       menu:         menu_commands
       title:        commands
