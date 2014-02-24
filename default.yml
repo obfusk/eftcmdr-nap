@@ -1,1 +1,113 @@
-...
+<%
+  apps_file = file.sub(/\.yml\z/, '.apps')
+  apps      = File.exists?(apps) ? File.read(apps).split : []
+  logs      = Hash[apps.map do |x|
+    [x, Hash[%x[ nap log "#{x}" assoc ].lines
+          .map { |l| l.chomp.split /\s+/, 2 }]]
+  end]
+%>
+
+_log: &_log                                                     # {{{1
+  ask:          ask_lines
+  text:         How many lines?
+  default:      100
+  validate:     \A\d+\z
+  then:
+    eval:       eval_view_log
+    code: |
+      osh! 'echo cd "$1" && echo tail -f -n "$2" "$3"',
+        app, ctx[:ask_lines], logfile
+                                                                # }}}1
+
+<% apps.each do |x| %>                                          # {{{1
+_logs_<%= x %>: &_logs_<%= x %>
+  tag:              log
+  text:             view log
+  then:
+    menu:           menu_logs
+    title:          log files
+    text:           Choose a log file to view
+    choices:
+    <% logs[app].each_pair do |n,f| %>
+      - tag:        <%= n %>
+        text:       <%= f %>
+        then:
+          eval:     eval_logfile
+          code: |
+            logfile = logs[app][ctx[:menu_logs][:tag]]
+          then: &_log
+    <% end %>
+<% end %>                                                       # }}}1
+
+menu:               menu_apps                                   # {{{1
+title:              apps
+text:               Choose an app
+choices:
+<% apps.each do |x| %>
+- tag:  <%= x %>
+  text: The <%= x %> app
+  then:
+    eval:           eval_menu_apps
+    code: |
+      app = ctx[:menu_apps][:tag]
+    then:
+      menu:         menu_commands
+      title:        commands
+      text:         Choose a command to run
+      choices:
+      - &_logs_<%= x %>
+      - &_console
+      - &_psql
+      - &_reset
+<% end %>                                                       # }}}1
+
+_console: &_console                                             # {{{1
+  tag:              console
+  text:             rails console
+  then:
+    eval:           eval_rails_console
+    code: |
+      osh! 'echo cd "$1"; echo RAILS_ENV=production bundle exec rails c',
+        app, exit: true
+                                                                # }}}1
+
+_psql: &_psql                                                   # {{{1
+  tag:              psql
+  text:             postgresql console
+  then:
+    eval:           eval_psql
+    code: |
+      osh! 'echo psql -h localhost -U "$1" "$1"', app
+                                                                # }}}1
+
+_reset: &_reset                                                 # {{{1
+  tag:              reset
+  text:             git reset
+  then:
+    show_text:      show_text_git_status
+    code: |
+      oshc!('echo cd "$1"; echo git fetch --all; echo git status',
+        app, merge: true, exit: true).stdout
+    then:
+      ask_yesno:    ask_yesno_git_reset
+      text:         Are you sure?
+      then:
+        eval:       eval_git_reset
+        code: |
+          osh! 'echo cd "$1"; echo git reset --hard', app, exit: true
+      else:
+        eval:       eval_git_reset_cancelled
+        code: |
+          ohai 'git reset cancelled'
+                                                                # }}}1
+
+# list: ->() { %x[ naps list ].split },
+# stat: ->(x) { %x[ nap status #{x} -s ].strip.split ' ', 2 },
+# info: ->(x) { LINES[%x[ nap info #{x} -q ]] },
+# hist: ->(x, n) { LINES[%x[ nap log #{x} hist #{n} -v ]] },
+# logs: ->(x) { %x[ nap log #{x} list ].split },
+# log_as: ->(x) { LINES[%x[ nap log #{x} assoc ]] },
+# log: ->(l, n) { LINES[%x[ tail -n #{n} -- #{l} ]] },
+# start: ->(x) { sys "nap start #{x}" },
+# stop: ->(x) { %x[ nap stop #{x} ] },
+# st_all: ->() { sys 'naps pstart' },
