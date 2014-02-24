@@ -1,8 +1,11 @@
 <%
-  apps_file = file.sub(/\.yml\z/, '.apps')
-  apps      = File.exists?(apps_file) ?
-                File.read(apps_file).split : []
-  logs      = Hash[apps.map do |x|
+  perms_file  = file.sub(/\.yml\z/, '.perms')
+  apps_file   = file.sub(/\.yml\z/, '.apps')
+  perms       = File.exists?(perms_file) ?
+                  File.read(perms_file).split : []
+  apps        = File.exists?(apps_file) ?
+                  File.read(apps_file).split : []
+  logs        = Hash[apps.map do |x|
     [x, Hash[%x[ nap log #{x} assoc ].lines
           .map { |l| l.chomp.split /\s+/, 2 }]]
   end]
@@ -151,9 +154,11 @@ choices:
       - *_info
       - *_logs_<%= x %>
       - *_hist
-      - *_console
-      - *_psql
       - *_start
       - *_stop
+    <% if perms.include? 'admin' %>
+      - *_console
+      - *_psql
       - *_reset
+    <% end %>
 <% end %>                                                       # }}}1
