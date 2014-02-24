@@ -29,7 +29,7 @@ _logs_<%= x %>: &_logs_<%= x %>
     title:          log files
     text:           Choose a log file to view
     choices:
-    <% logs[app].each_pair do |n,f| %>
+    <% logs[x].each_pair do |n,f| %>
       - tag:        <%= n %>
         text:       <%= f %>
         then:
