@@ -1,6 +1,11 @@
 <%                                                              # {{{1
+  require 'json'
+
+  appdir_for  = -> app { "#{Dir.home}/#{app}/app" }
+
   perms_file  = file.sub(/\.yml\z/, '.perms')
   apps_file   = file.sub(/\.yml\z/, '.apps')
+
   perms       = File.exists?(perms_file) ?
                   File.read(perms_file).split : []
   apps        = File.exists?(apps_file) ?
@@ -13,7 +18,7 @@
 
 _stat: &_stat                                                   # {{{1
   tag:              stat
-  text:             status
+  text:             app status
   then:
     eval:           eval_nap_status
     code: |
@@ -22,7 +27,7 @@ _stat: &_stat                                                   # {{{1
 
 _info: &_info                                                   # {{{1
   tag:              info
-  text:             info
+  text:             app info
   then:
     eval:           eval_nap_info
     code: |
@@ -43,7 +48,7 @@ _log: &_log                                                     # {{{1
 
 _hist: &_hist                                                   # {{{1
   tag:              hist
-  text:             history
+  text:             git history
   then:
     ask:            ask_commits
     text:           How many commits?
@@ -76,7 +81,7 @@ _psql: &_psql                                                   # {{{1
 
 _start: &_start                                                 # {{{1
   tag:              start
-  text:             start
+  text:             start app
   then:
     eval:           eval_nap_start
     code: |
@@ -85,7 +90,7 @@ _start: &_start                                                 # {{{1
 
 _stop: &_stop                                                   # {{{1
   tag:              stop
-  text:             stop
+  text:             stop app
   then:
     eval:           eval_nap_stop
     code: |
@@ -94,7 +99,7 @@ _stop: &_stop                                                   # {{{1
 
 _reset: &_reset                                                 # {{{1
   tag:              reset
-  text:             git reset
+  text:             git hard reset
   then:
     show_text:      show_text_git_status
     scroll:         true
@@ -117,15 +122,15 @@ _reset: &_reset                                                 # {{{1
 <% apps.each do |x| %>                                          # {{{1
 _logs_<%= x %>: &_logs_<%= x %>
   tag:              log
-  text:             view log
+  text:             view log files
   then:
     menu:           menu_logs
     title:          log files
     text:           Choose a log file to view
     choices:
     <% logs[x].each_pair do |n,f| %>
-      - tag:        <%= n.inspect %>
-        text:       <%= f.inspect %>
+      - tag:        <%= n.to_json %>
+        text:       <%= f.to_json %>
         then:
           eval:     eval_logfile
           code: |
@@ -145,7 +150,7 @@ choices:
     eval:           eval_menu_apps
     code: |
       app     = ctx[:menu_apps][:tag]
-      appdir  = "#{Dir.home}/#{app}/app"
+      appdir  = appdir_for[app]
     then:
       menu:         menu_commands
       title:        commands
