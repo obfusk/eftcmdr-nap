@@ -18,146 +18,11 @@
   end]
 %>                                                              # }}}1
 
-<% apps.each do |x| %>
-
-_stat_<%= x %>: &_stat_<%= x %>                                 # {{{1
-  tag:              stat
-  text:             app status
-  then:
-    eval:           eval_nap_status
-    code: |
-      osh! 'nap status "$1"', app; q[]
-    then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_info_<%= x %>: &_info_<%= x %>                                 # {{{1
-  tag:              info
-  text:             app info
-  then:
-    eval:           eval_nap_info
-    code: |
-      osh! 'nap info "$1"', app; q[]
-    then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_log_<%= x %>: &_log_<%= x %>                                   # {{{1
-  ask:              ask_lines
-  text:             How many lines?
-  default:          100
-  validate:         \A\d+\z
-  then:
-    eval:           eval_view_log
-    code: |
-      trap('INT') { ohai 'bye' }
-      osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
-    then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_hist_<%= x %>: &_hist_<%= x %>                                 # {{{1
-  tag:              hist
-  text:             git history
-  then:
-    ask:            ask_commits
-    text:           How many commits?
-    default:        100
-    validate:       \A\d+\z
-    then:
-      eval:         eval_nap_hist
-      code: |
-        osh! 'PAGER= nap log "$1" hist "$2" -v',
-          app, ctx[:ask_commits]; q[]
-      then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_console_<%= x %>: &_console_<%= x %>                           # {{{1
-  tag:              console
-  text:             rails console
-  then:
-    eval:           eval_rails_console
-    code: |
-      osh! 'RAILS_ENV=production bundle exec rails c', chdir: appdir
-    then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_psql_<%= x %>: &_psql_<%= x %>                                 # {{{1
-  tag:              psql
-  text:             postgresql console
-  then:
-    eval:           eval_psql
-    code: |
-      osh! 'psql -h localhost -U "$1" "$1"', app, chdir: appdir
-    then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_start_<%= x %>: &_start_<%= x %>                               # {{{1
-  tag:              start
-  text:             start app
-  then:
-    eval:           eval_nap_start
-    code: |
-      osh! 'nap start "$1"', app; q[]
-    then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_stop_<%= x %>: &_stop_<%= x %>                                 # {{{1
-  tag:              stop
-  text:             stop app
-  then:
-    eval:           eval_nap_stop
-    code: |
-      osh! 'nap stop "$1"', app; q[]
-    then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_reset_<%= x %>: &_reset_<%= x %>                               # {{{1
-  tag:              reset
-  text:             git hard reset
-  then:
-    show_text:      show_text_git_status
-    scroll:         true
-    code: |
-      oshc!('git fetch --all; git status',
-        merge: true, exit: true, chdir: appdir).stdout
-    then:
-      ask_yesno:    ask_yesno_git_reset
-      text:         Are you sure?
-      then:
-        eval:       eval_git_reset
-        code: |
-          osh! 'git reset --hard', chdir: appdir
-        then: *_menu_commands_<%= x %>
-      else:
-        eval:       eval_git_reset_cancelled
-        code: |
-          ohai 'git reset cancelled'
-        then: *_menu_commands_<%= x %>
-                                                                # }}}1
-
-_logs_<%= x %>: &_logs_<%= x %>                                 # {{{1
-  tag:              log
-  text:             view log files
-  then:
-    menu:           menu_logs
-    title:          log files
-    text:           Choose a log file to view
-    choices:
-    <% logs[x].each_pair do |n,f| %>
-      - tag:        <%= n.to_json %>
-        text:       <%= f.to_json %>
-        then:
-          eval:     eval_logfile
-          code: |
-            logfile = logs[app][ctx[:menu_logs][:tag]]
-          then: *_log
-    <% end %>
-                                                                # }}}1
-
-<% end %>
-
-menu:               menu_apps                                   # {{{1
+menu:               menu_apps
 title:              apps
 text:               Choose an app
 choices:
+
 <% apps.each do |x| %>
 - tag:  <%= x %>
   text: <%= x %>
@@ -167,6 +32,139 @@ choices:
       app     = ctx[:menu_apps][:tag]
       appdir  = appdir_for[app]
     then: &_menu_commands_<%= x %>
+
+      _stat_<%= x %>: &_stat_<%= x %>                           # {{{1
+        tag:        stat
+        text:       app status
+        then:
+          eval:     eval_nap_status
+          code: |
+            osh! 'nap status "$1"', app; q[]
+          then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _info_<%= x %>: &_info_<%= x %>                           # {{{1
+        tag:        info
+        text:       app info
+        then:
+          eval:     eval_nap_info
+          code: |
+            osh! 'nap info "$1"', app; q[]
+          then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _log_<%= x %>: &_log_<%= x %>                             # {{{1
+        ask:        ask_lines
+        text:       How many lines?
+        default:    100
+        validate:   \A\d+\z
+        then:
+          eval:     eval_view_log
+          code: |
+            trap('INT') { ohai 'bye' }
+            osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
+          then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _hist_<%= x %>: &_hist_<%= x %>                           # {{{1
+        tag:        hist
+        text:       git history
+        then:
+          ask:      ask_commits
+          text:     How many commits?
+          default:  100
+          validate: \A\d+\z
+          then:
+            eval:   eval_nap_hist
+            code: |
+              osh! 'PAGER= nap log "$1" hist "$2" -v',
+                app, ctx[:ask_commits]; q[]
+            then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _console_<%= x %>: &_console_<%= x %>                     # {{{1
+        tag:        console
+        text:       rails console
+        then:
+          eval:     eval_rails_console
+          code: |
+            osh! 'RAILS_ENV=production bundle exec rails c', chdir: appdir
+          then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _psql_<%= x %>: &_psql_<%= x %>                           # {{{1
+        tag:        psql
+        text:       postgresql console
+        then:
+          eval:     eval_psql
+          code: |
+            osh! 'psql -h localhost -U "$1" "$1"', app, chdir: appdir
+          then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _start_<%= x %>: &_start_<%= x %>                         # {{{1
+        tag:        start
+        text:       start app
+        then:
+          eval:     eval_nap_start
+          code: |
+            osh! 'nap start "$1"', app; q[]
+          then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _stop_<%= x %>: &_stop_<%= x %>                           # {{{1
+        tag:        stop
+        text:       stop app
+        then:
+          eval:     eval_nap_stop
+          code: |
+            osh! 'nap stop "$1"', app; q[]
+          then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _reset_<%= x %>: &_reset_<%= x %>                         # {{{1
+        tag:              reset
+        text:             git hard reset
+        then:
+          show_text:      show_text_git_status
+          scroll:         true
+          code: |
+            oshc!('git fetch --all; git status',
+              merge: true, exit: true, chdir: appdir).stdout
+          then:
+            ask_yesno:    ask_yesno_git_reset
+            text:         Are you sure?
+            then:
+              eval:       eval_git_reset
+              code: |
+                osh! 'git reset --hard', chdir: appdir
+              then: *_menu_commands_<%= x %>
+            else:
+              eval:       eval_git_reset_cancelled
+              code: |
+                ohai 'git reset cancelled'
+              then: *_menu_commands_<%= x %>
+                                                                # }}}1
+
+      _logs_<%= x %>: &_logs_<%= x %>                           # {{{1
+        tag:              log
+        text:             view log files
+        then:
+          menu:           menu_logs
+          title:          log files
+          text:           Choose a log file to view
+          choices:
+          <% logs[x].each_pair do |n,f| %>
+            - tag:        <%= n.to_json %>
+              text:       <%= f.to_json %>
+              then:
+                eval:     eval_logfile
+                code: |
+                  logfile = logs[app][ctx[:menu_logs][:tag]]
+                then: *_log
+          <% end %>
+                                                                # }}}1
+
       menu:         menu_commands
       title:        commands
       text:         Choose a command to run
@@ -184,4 +182,5 @@ choices:
       - *_psql_<%= x %>
       - *_reset_<%= x %>
     <% end %>
-<% end %>                                                       # }}}1
+
+<% end %>
