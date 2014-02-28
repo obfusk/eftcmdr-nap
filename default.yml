@@ -1,6 +1,8 @@
 <%                                                              # {{{1
   require 'json'
 
+  q           = -> { puts 'press return ...'; $stdin.readline }
+
   appdir_for  = -> app { "#{Dir.home}/#{app}/app" }
 
   perms_file  = file.sub(/\.yml\z/, '.perms')
@@ -16,25 +18,29 @@
   end]
 %>                                                              # }}}1
 
-_stat: &_stat                                                   # {{{1
+<% apps.each do |x| %>
+
+_stat_<%= x %>: &_stat_<%= x %>                                 # {{{1
   tag:              stat
   text:             app status
   then:
     eval:           eval_nap_status
     code: |
-      osh! 'nap status "$1"', app
+      osh! 'nap status "$1"', app; q[]
+    then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-_info: &_info                                                   # {{{1
+_info_<%= x %>: &_info_<%= x %>                                 # {{{1
   tag:              info
   text:             app info
   then:
     eval:           eval_nap_info
     code: |
-      osh! 'nap info "$1"', app
+      osh! 'nap info "$1"', app; q[]
+    then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-_log: &_log                                                     # {{{1
+_log_<%= x %>: &_log_<%= x %>                                   # {{{1
   ask:              ask_lines
   text:             How many lines?
   default:          100
@@ -44,9 +50,10 @@ _log: &_log                                                     # {{{1
     code: |
       trap('INT') { ohai 'bye' }
       osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
+    then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-_hist: &_hist                                                   # {{{1
+_hist_<%= x %>: &_hist_<%= x %>                                 # {{{1
   tag:              hist
   text:             git history
   then:
@@ -58,46 +65,51 @@ _hist: &_hist                                                   # {{{1
       eval:         eval_nap_hist
       code: |
         osh! 'PAGER= nap log "$1" hist "$2" -v',
-          app, ctx[:ask_commits]
+          app, ctx[:ask_commits]; q[]
+      then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-_console: &_console                                             # {{{1
+_console_<%= x %>: &_console_<%= x %>                           # {{{1
   tag:              console
   text:             rails console
   then:
     eval:           eval_rails_console
     code: |
       osh! 'RAILS_ENV=production bundle exec rails c', chdir: appdir
+    then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-_psql: &_psql                                                   # {{{1
+_psql_<%= x %>: &_psql_<%= x %>                                 # {{{1
   tag:              psql
   text:             postgresql console
   then:
     eval:           eval_psql
     code: |
       osh! 'psql -h localhost -U "$1" "$1"', app, chdir: appdir
+    then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-_start: &_start                                                 # {{{1
+_start_<%= x %>: &_start_<%= x %>                               # {{{1
   tag:              start
   text:             start app
   then:
     eval:           eval_nap_start
     code: |
-      osh! 'nap start "$1"', app
+      osh! 'nap start "$1"', app; q[]
+    then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-_stop: &_stop                                                   # {{{1
+_stop_<%= x %>: &_stop_<%= x %>                                 # {{{1
   tag:              stop
   text:             stop app
   then:
     eval:           eval_nap_stop
     code: |
-      osh! 'nap stop "$1"', app
+      osh! 'nap stop "$1"', app; q[]
+    then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-_reset: &_reset                                                 # {{{1
+_reset_<%= x %>: &_reset_<%= x %>                               # {{{1
   tag:              reset
   text:             git hard reset
   then:
@@ -113,14 +125,15 @@ _reset: &_reset                                                 # {{{1
         eval:       eval_git_reset
         code: |
           osh! 'git reset --hard', chdir: appdir
+        then: *_menu_commands_<%= x %>
       else:
         eval:       eval_git_reset_cancelled
         code: |
           ohai 'git reset cancelled'
+        then: *_menu_commands_<%= x %>
                                                                 # }}}1
 
-<% apps.each do |x| %>                                          # {{{1
-_logs_<%= x %>: &_logs_<%= x %>
+_logs_<%= x %>: &_logs_<%= x %>                                 # {{{1
   tag:              log
   text:             view log files
   then:
@@ -137,7 +150,9 @@ _logs_<%= x %>: &_logs_<%= x %>
             logfile = logs[app][ctx[:menu_logs][:tag]]
           then: *_log
     <% end %>
-<% end %>                                                       # }}}1
+                                                                # }}}1
+
+<% end %>
 
 menu:               menu_apps                                   # {{{1
 title:              apps
@@ -151,22 +166,22 @@ choices:
     code: |
       app     = ctx[:menu_apps][:tag]
       appdir  = appdir_for[app]
-    then:
+    then: &_menu_commands_<%= x %>
       menu:         menu_commands
       title:        commands
       text:         Choose a command to run
       choices:
-      - *_stat
-      - *_info
+      - *_stat_<%= x %>
+      - *_info_<%= x %>
       - *_logs_<%= x %>
-      - *_hist
+      - *_hist_<%= x %>
     <% if (perms & %w{ admin start_stop }).any? %>
-      - *_start
-      - *_stop
+      - *_start_<%= x %>
+      - *_stop_<%= x %>
     <% end %>
     <% if (perms & %w{ admin }).any? %>
-      - *_console
-      - *_psql
-      - *_reset
+      - *_console_<%= x %>
+      - *_psql_<%= x %>
+      - *_reset_<%= x %>
     <% end %>
 <% end %>                                                       # }}}1
