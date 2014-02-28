@@ -163,7 +163,7 @@ choices:
                 eval:     eval_logfile
                 code: |
                   logfile = logs[app][ctx[:menu_logs][:tag]]
-                then: *_log
+                then: *_log_<%= x %>
           <% end %>
                                                                 # }}}1
 
