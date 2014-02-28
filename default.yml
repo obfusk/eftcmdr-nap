@@ -18,6 +18,8 @@
   end]
 %>                                                              # }}}1
 
+&_menu
+
 menu:               menu_apps
 title:              apps
 text:               Choose an app
@@ -182,5 +184,6 @@ choices:
       - *_psql_<%= x %>
       - *_reset_<%= x %>
     <% end %>
+      cancel: *_menu
 
 <% end %>
