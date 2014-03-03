@@ -61,7 +61,7 @@ choices:
         then:
           menu:         menu_logs
           title:        log files
-          text:         Choose a log file to view
+          text: <%= "Choose a log file to view for app #{x}".to_json %>
           choices:
           <% logs[x].each_pair do |n,f| %>
             - tag:      <%= n.to_json %>
@@ -79,7 +79,9 @@ choices:
                     eval:   eval_view_log
                     code: |
                       trap('INT') { ohai 'bye' }
-                      osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
+                      r = osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
+                      s = r.status.termsig
+                      s && Signal.signame(s) == 'INT' or raise 'tail failed'
                     then: *_menu_commands_<%= i %>
                   cancel: *_logs_<%= i %>
           <% end %>
@@ -150,7 +152,7 @@ choices:
           show_text:    show_text_git_status
           scroll:       true
           code: |
-            oshc!('git fetch --all; git status',
+            oshc!('pwd; git fetch --all; git status',
               merge: true, exit: true, chdir: appdir).stdout
           then:
             ask_yesno:  ask_yesno_git_reset
@@ -169,7 +171,7 @@ choices:
 
       menu:             menu_commands
       title:            commands
-      text:             Choose a command to run
+      text: <%= "Choose a command to run for app #{x}".to_json %>
       choices:
       - *_stat_<%= i %>
       - *_info_<%= i %>
