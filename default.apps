@@ -1,1 +1,5 @@
-foo bar baz
+admin:
+- foo
+start_stop:
+- bar
+none: all

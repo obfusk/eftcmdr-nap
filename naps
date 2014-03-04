@@ -1,0 +1,8 @@
+#!/bin/bash
+if [ "$1" = list ]; then
+  echo foo
+  echo bar
+  echo baz
+else
+  echo naps "$@"
+fi

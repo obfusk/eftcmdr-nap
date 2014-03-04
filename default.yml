@@ -2,20 +2,27 @@
   require 'json'
 
   q           = -> { puts 'press return ...'; $stdin.readline }
-
   appdir_for  = -> app { "#{Dir.home}/#{app}/app" }
 
-  perms_file  = file.sub(/\.yml\z/, '.perms')
+  all_apps    = %x[ naps list ].lines.map(&:chomp)
   apps_file   = file.sub(/\.yml\z/, '.apps')
+  apps_       = File.exists?(apps_file) ?
+                  YAML.load(File.read(apps_file)) : {}
+  perms       = { 'admin' => [], 'start_stop' => [] }.merge \
+                  Hash[apps_.map do |k,v|
+    [k, v == 'all' ? all_apps : v ]
+  end]
+  apps        = perms.values.flatten.uniq.sort
 
-  perms       = File.exists?(perms_file) ?
-                  File.read(perms_file).split : []
-  apps        = File.exists?(apps_file) ?
-                  File.read(apps_file).split : []
   logs        = Hash[apps.map do |x|
     [x, Hash[%x[ nap log #{x} assoc ].lines
           .map { |l| l.chomp.split /\s+/, 2 }]]
   end]
+
+  branch = -> dir {
+    shc!(*%w{ git symbolic-ref -q HEAD }, chdir: dir).stdout \
+      .chomp.sub %r{^refs/heads/}, ''
+  }
 %>                                                              # }}}1
 
 &_menu
@@ -160,7 +167,8 @@ choices:
             then:
               eval:     eval_git_reset
               code: |
-                osh! 'git reset --hard', chdir: appdir
+                b = branch[appdir]
+                osh! 'git reset --hard origin/"$1"', b, chdir: appdir
               then: *_menu_commands_<%= i %>
             else:
               eval:     eval_git_reset_cancelled
@@ -177,11 +185,12 @@ choices:
       - *_info_<%= i %>
       - *_logs_<%= i %>
       - *_hist_<%= i %>
-    <% if (perms & %w{ admin start_stop }).any? %>
+    <% if perms['admin'].include?(x) ||
+          perms['start_stop'].include?(x) %>
       - *_start_<%= i %>
       - *_stop_<%= i %>
     <% end %>
-    <% if (perms & %w{ admin }).any? %>
+    <% if perms['admin'].include?(x) %>
       - *_console_<%= i %>
       - *_psql_<%= i %>
       - *_reset_<%= i %>
