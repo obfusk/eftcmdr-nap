@@ -81,7 +81,7 @@ choices:
                       trap('INT') { ohai 'bye' }
                       r = osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
                       s = r.status.termsig
-                      s && Signal.signame(s) == 'INT' or raise 'tail failed'
+                      s && Signal.list.key(s) == 'INT' or raise 'tail failed'
                     then: *_menu_commands_<%= i %>
                   cancel: *_logs_<%= i %>
           <% end %>
