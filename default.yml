@@ -20,7 +20,7 @@
   end]
 
   branch = -> dir {
-    shc!(*%w{ git symbolic-ref -q HEAD }, chdir: dir).stdout \
+    shc!('git symbolic-ref -q HEAD', chdir: dir).stdout \
       .chomp.sub %r{^refs/heads/}, ''
   }
 %>                                                              # }}}1
@@ -169,11 +169,12 @@ choices:
               code: |
                 b = branch[appdir]
                 osh! 'git reset --hard origin/"$1"', b, chdir: appdir
+                q[]
               then: *_menu_commands_<%= i %>
             else:
               eval:     eval_git_reset_cancelled
               code: |
-                ohai 'git reset cancelled'
+                ohai 'git reset cancelled'; q[]
               then: *_menu_commands_<%= i %>
                                                                 # }}}1
 
