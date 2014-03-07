@@ -89,7 +89,7 @@ choices:
                       r = osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
                       s = r.status.termsig
                       s && Signal.list.key(s) == 'INT' or raise 'tail failed'
-                    then: *_menu_commands_<%= i %>
+                    then: *_logs_<%= i %>
                   cancel: *_logs_<%= i %>
           <% end %>
           cancel: *_menu_commands_<%= i %>
