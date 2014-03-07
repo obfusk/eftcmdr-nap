@@ -2,4 +2,4 @@ admin:
 - foo
 start_stop:
 - bar
-none: all
+view: all
