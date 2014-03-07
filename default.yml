@@ -65,10 +65,11 @@ choices:
       _logs_<%= i %>: &_logs_<%= i %>                           # {{{1
         tag:            log
         text:           view log files
-        then:
+        then: &_menu_logs_<%= i %>
           menu:         menu_logs
           title:        log files
-          text: <%= "Choose a log file to view for app #{x}".to_json %>
+          text: <%= ("Choose a log file to view for app #{x}" +
+                     " (^C quits viewing)").to_json %>
           choices:
           <% logs[x].each_pair do |n,f| %>
             - tag:      <%= n.to_json %>
@@ -89,8 +90,8 @@ choices:
                       r = osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
                       s = r.status.termsig
                       s && Signal.list.key(s) == 'INT' or raise 'tail failed'
-                    then: *_logs_<%= i %>
-                  cancel: *_logs_<%= i %>
+                    then: *_menu_logs_<%= i %>
+                  cancel: *_menu_logs_<%= i %>
           <% end %>
           cancel: *_menu_commands_<%= i %>
                                                                 # }}}1
