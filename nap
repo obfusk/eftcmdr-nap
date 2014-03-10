@@ -1,7 +1,0 @@
-#!/bin/bash
-if [ "$1" = log -a "$3" = assoc ]; then
-  echo log1 /no/such/file
-  echo log2 /dev/null
-else
-  echo nap "$@"
-fi
