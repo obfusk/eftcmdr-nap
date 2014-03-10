@@ -2,13 +2,15 @@
   require 'json'
 
   q           = -> { puts 'press return ...'; $stdin.readline }
-  appdir_for  = -> app { "#{Dir.home}/#{app}/app" }
+  nap_home    = ENV['NAP_APPS_DIR'] || Dir.home
+  appdir_for  = -> app { "#{nap_home}/#{app}/app" }
 
   all_apps    = %x[ naps list ].lines.map(&:chomp)
   apps_file   = file.sub(/\.yml\z/, '.apps')
   apps_       = File.exists?(apps_file) ?
                   YAML.load(File.read(apps_file)) : {}
-  perms       = { 'admin' => [], 'start_stop' => [] }.merge \
+
+  perms       = { 'admin' => [], 'control' => [] }.merge \
                   Hash[apps_.map do |k,v|
     [k, v == 'all' ? all_apps : v ]
   end]
@@ -16,7 +18,20 @@
 
   logs        = Hash[apps.map do |x|
     [x, Hash[%x[ nap log #{x} assoc ].lines
-          .map { |l| l.chomp.split /\s+/, 2 }]]
+          .map { |l| l.chomp.split /\s+/, 2 } .sort]]
+  end]
+
+  rakes       = Hash[apps.map do |x|
+    d   = appdir_for[x]
+    ts  = if File.exists? "#{d}/Rakefile"
+      shc!('RAILS_ENV=production bundle exec rake -T', chdir: d) \
+        .stdout.lines.map { |l| l.chomp.split(/\s+/, 3)[1..3] } \
+        .map { |(t,d)| [t,d.sub(/^# /,'')] } .sort \
+        .tap { |ts| ts.each { |(t,d)|
+          t =~ /\A[a-zA-Z:]+\z/ or raise 'invalid rake'
+        } }
+    else [] end
+    [x,Hash[ts]]
   end]
 
   branch = -> dir {
@@ -75,23 +90,20 @@ choices:
             - tag:      <%= n.to_json %>
               text:     <%= f.to_json %>
               then:
-                eval:   eval_logfile
-                code: |
-                  logfile = logs[app][ctx[:menu_logs][:tag]]
+                ask:      ask_lines
+                text:     How many lines?
+                default:  100
+                validate: \A\d+\z
                 then:
-                  ask:      ask_lines
-                  text:     How many lines?
-                  default:  100
-                  validate: \A\d+\z
-                  then:
-                    eval:   eval_view_log
-                    code: |
-                      trap('INT') { ohai 'bye' }
-                      r = osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], logfile
-                      s = r.status.termsig
-                      s && Signal.list.key(s) == 'INT' or raise 'tail failed'
-                    then: *_menu_logs_<%= i %>
-                  cancel: *_menu_logs_<%= i %>
+                  eval:   eval_view_log
+                  code: |
+                    trap('INT') { ohai 'bye' }
+                    l = logs[app][ctx[:menu_logs][:tag]]
+                    r = osh 'tail -f -n "$1" "$2"', ctx[:ask_lines], l
+                    s = r.status.termsig
+                    s && Signal.list.key(s) == 'INT' or raise 'tail failed'
+                  then: *_menu_logs_<%= i %>
+                cancel: *_menu_logs_<%= i %>
           <% end %>
           cancel: *_menu_commands_<%= i %>
                                                                 # }}}1
@@ -113,26 +125,6 @@ choices:
           cancel: *_menu_commands_<%= i %>
                                                                 # }}}1
 
-      _console_<%= i %>: &_console_<%= i %>                     # {{{1
-        tag:            console
-        text:           rails console
-        then:
-          eval:         eval_rails_console
-          code: |
-            osh! 'RAILS_ENV=production bundle exec rails c', chdir: appdir
-          then: *_menu_commands_<%= i %>
-                                                                # }}}1
-
-      _psql_<%= i %>: &_psql_<%= i %>                           # {{{1
-        tag:            psql
-        text:           postgresql console
-        then:
-          eval:         eval_psql
-          code: |
-            osh! 'psql -h localhost -U "$1" "$1"', app, chdir: appdir
-          then: *_menu_commands_<%= i %>
-                                                                # }}}1
-
       _start_<%= i %>: &_start_<%= i %>                         # {{{1
         tag:            start
         text:           start app
@@ -150,6 +142,59 @@ choices:
           eval:         eval_nap_stop
           code: |
             osh! 'nap stop "$1"', app; q[]
+          then: *_menu_commands_<%= i %>
+                                                                # }}}1
+
+      _update_<%= i %>: &_update_<%= i %>                       # {{{1
+        tag:            update
+        text:           update app
+        then:
+          eval:         eval_nap_update
+          code: |
+            osh! 'nap update "$1"', app; q[]
+          then: *_menu_commands_<%= i %>
+                                                                # }}}1
+
+      <% if !rakes[x].empty? %>
+      _rake_<%= i %>: &_rake_<%= i %>                           # {{{1
+        tag:            rake
+        text:           run rake tasks
+        then: &_menu_rakes_<%= i %>
+          menu:         menu_rakes
+          title:        rake tasks
+          text: <%= "Choose a rake task to run for app #{x}".to_json %>
+          choices:
+          <% rakes[x].each_pair do |t,d| %>
+            - tag:      <%= t.to_json %>
+              text:     <%= d.to_json %>
+              then:
+                eval:   eval_rake_task
+                code: |
+                  osh!('RAILS_ENV=production bundle exec rake "$1"',
+                     ctx[:menu_rakes][:tag], chdir: appdir); q[]
+                then: *_menu_rakes_<%= i %>
+          <% end %>
+          cancel: *_menu_commands_<%= i %>
+      <% end %>
+                                                                # }}}1
+
+      _console_<%= i %>: &_console_<%= i %>                     # {{{1
+        tag:            console
+        text:           rails console
+        then:
+          eval:         eval_rails_console
+          code: |
+            osh! 'RAILS_ENV=production bundle exec rails c', chdir: appdir
+          then: *_menu_commands_<%= i %>
+                                                                # }}}1
+
+      _psql_<%= i %>: &_psql_<%= i %>                           # {{{1
+        tag:            psql
+        text:           postgresql console
+        then:
+          eval:         eval_psql
+          code: |
+            osh! 'psql -h localhost -U "$1" "$1"', app, chdir: appdir
           then: *_menu_commands_<%= i %>
                                                                 # }}}1
 
@@ -188,11 +233,16 @@ choices:
       - *_logs_<%= i %>
       - *_hist_<%= i %>
     <% if perms['admin'].include?(x) ||
-          perms['start_stop'].include?(x) %>
+          perms['control'].include?(x) %>
       - *_start_<%= i %>
       - *_stop_<%= i %>
+      - *_update_<%= i %>
     <% end %>
+    # ... TODO ...
     <% if perms['admin'].include?(x) %>
+      <% if !rakes[x].empty? %>
+      - *_rake_<%= i %>
+      <% end %>
       - *_console_<%= i %>
       - *_psql_<%= i %>
       - *_reset_<%= i %>

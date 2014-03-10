@@ -1,0 +1,9 @@
+desc 'foo'
+task 'foo' do
+  puts 'FOO!'
+end
+
+desc "gasdfasd asdfs fasd df\nadas"
+task 'bar' do
+  puts 'BAR!'
+end

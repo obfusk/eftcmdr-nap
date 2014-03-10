@@ -1,0 +1,7 @@
+#!/bin/bash
+if [ "$*" = 'exec rake -T' ]; then
+  b="$( which -a bundle | grep -vF "$0" | head -n 1 )"
+  "$b" "$@"
+else
+  echo bundle "$@"
+fi

@@ -1,5 +1,5 @@
 admin:
 - foo
-start_stop:
+control:
 - bar
 view: all
