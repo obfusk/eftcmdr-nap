@@ -2,37 +2,40 @@
   require 'json'
 
   q           = -> { puts 'press return ...'; $stdin.readline }
+
+  rake_yml    = File.expand_path '../_rake.yml', file
+  rake_apps   = File.expand_path '../_rake.apps', file
+
   nap_home    = ENV['NAP_APPS_DIR'] || Dir.home
   appdir_for  = -> app { "#{nap_home}/#{app}/app" }
-
   all_apps    = %x[ naps list ].lines.map(&:chomp)
-  apps_file   = file.sub(/\.yml\z/, '.apps')
+
+  apps_file   = File.expand_path \
+                  "../#{File.basename(file, '.yml')}.apps", file
+
   apps_       = File.exists?(apps_file) ?
                   YAML.load(File.read(apps_file)) : {}
+  rapps       = File.exists?(rake_apps) ?
+                  YAML.load(File.read(rake_apps)) : {}
 
-  perms       = { 'admin' => [], 'control' => [] }.merge \
+  perms       = { 'admin' => [], 'control' => [], 'rake' => {} }.merge \
                   Hash[apps_.map do |k,v|
-    [k, v == 'all' ? all_apps : v ]
-  end]
-  apps        = perms.values.flatten.uniq.sort
+                    [k, v == 'all' ? all_apps : v ]
+                  end]
+
+  apps        = perms.reject { |k,v| k == 'rake' } .values.flatten.uniq.sort
 
   logs        = Hash[apps.map do |x|
     [x, Hash[%x[ nap log #{x} assoc ].lines
           .map { |l| l.chomp.split /\s+/, 2 } .sort]]
   end]
 
-  rakes       = Hash[apps.map do |x|
-    d   = appdir_for[x]
-    ts  = if File.exists? "#{d}/Rakefile"
-      shc!('RAILS_ENV=production bundle exec rake -T', chdir: d) \
-        .stdout.lines.map { |l| l.chomp.split(/\s+/, 3)[1..3] } \
-        .map { |(t,d)| [t,d.sub(/^# /,'')] } .sort \
-        .tap { |ts| ts.each { |(t,d)|
-          t =~ /\A[a-zA-Z:]+\z/ or raise 'invalid rake'
-        } }
-    else [] end
-    [x,Hash[ts]]
-  end]
+  rake_wl     = -> app {
+    ( perms['rake'].fetch('~all', []) |
+      perms['rake'].fetch(app   , []) |
+      rapps        .fetch('~all', []) |
+      rapps        .fetch(app   , []) )
+  }
 
   branch = -> dir {
     shc!('git symbolic-ref -q HEAD', chdir: dir).stdout \
@@ -155,27 +158,16 @@ choices:
           then: *_menu_commands_<%= i %>
                                                                 # }}}1
 
-      <% if !rakes[x].empty? %>
       _rake_<%= i %>: &_rake_<%= i %>                           # {{{1
         tag:            rake
         text:           run rake tasks
-        then: &_menu_rakes_<%= i %>
-          menu:         menu_rakes
-          title:        rake tasks
-          text: <%= "Choose a rake task to run for app #{x}".to_json %>
-          choices:
-          <% rakes[x].each_pair do |t,d| %>
-            - tag:      <%= t.to_json %>
-              text:     <%= d.to_json %>
-              then:
-                eval:   eval_rake_task
-                code: |
-                  osh!('RAILS_ENV=production bundle exec rake "$1"',
-                     ctx[:menu_rakes][:tag], chdir: appdir); q[]
-                then: *_menu_rakes_<%= i %>
-          <% end %>
-          cancel: *_menu_commands_<%= i %>
-      <% end %>
+        then:
+          eval:         eval_eftcmdr_rake
+          code: |
+            osh! 'eftcmdr "$@"', rake_yml, app, apps_file,
+              perms['admin'].include?(app).to_s, *rake_wl[app],
+              chdir: appdir
+          then: *_menu_commands_<%= i %>
                                                                 # }}}1
 
       _console_<%= i %>: &_console_<%= i %>                     # {{{1
@@ -239,10 +231,11 @@ choices:
       - *_update_<%= i %>
     <% end %>
     # ... TODO ...
-    <% if perms['admin'].include?(x) %>
-      <% if !rakes[x].empty? %>
+    <% if perms['admin'].include?(x) ||
+         (perms['control'].include?(x) && !rake_wl[x].empty?) %>
       - *_rake_<%= i %>
-      <% end %>
+    <% end %>
+    <% if perms['admin'].include?(x) %>
       - *_console_<%= i %>
       - *_psql_<%= i %>
       - *_reset_<%= i %>
