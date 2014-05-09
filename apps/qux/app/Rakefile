@@ -1,0 +1,14 @@
+desc 'foo'
+task 'foo' do
+  puts 'FOO!'
+end
+
+desc "bar"
+task 'bar' do
+  puts 'BAR!'
+end
+
+desc "baz"
+task 'baz' do
+  puts 'BAZ!'
+end

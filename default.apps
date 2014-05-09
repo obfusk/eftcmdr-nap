@@ -2,4 +2,10 @@ admin:
 - foo
 control:
 - bar
+- qux
+- quuux
 view: all
+rake:
+  qux: &qux
+    - bar
+  quux: *qux

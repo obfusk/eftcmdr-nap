@@ -1,8 +1,6 @@
 #!/bin/bash
 if [ "$1" = list ]; then
-  echo foo
-  echo bar
-  echo baz
+  for x in foo bar baz qux quux quuux; do echo $x; done
 else
   echo naps "$@"
 fi
