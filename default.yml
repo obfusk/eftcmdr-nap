@@ -158,6 +158,17 @@ choices:
           then: *_menu_commands_<%= i %>
                                                                 # }}}1
 
+      _whenever_<%= i %>: &_whenever_<%= i %>                   # {{{1
+        tag:            whenever
+        text:           update crontab for whenever
+        then:
+          eval:         eval_whenever
+          code: |
+            osh! 'RAILS_ENV=production bundle exec whenever ' +
+                 '--update-crontab "$1"', app; q[]
+          then: *_menu_commands_<%= i %>
+                                                                # }}}1
+
       _rake_<%= i %>: &_rake_<%= i %>                           # {{{1
         tag:            rake
         text:           run rake tasks
@@ -229,6 +240,7 @@ choices:
       - *_start_<%= i %>
       - *_stop_<%= i %>
       - *_update_<%= i %>
+      - *_whenever_<%= i %>
     <% end %>
     # ... TODO ...
     <% if perms['admin'].include?(x) ||
