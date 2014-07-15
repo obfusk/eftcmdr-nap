@@ -8,9 +8,7 @@
     shc!('RAILS_ENV=production bundle exec rake -T') \
       .stdout.lines.map { |l| l.chomp.split(/\s+/, 3)[1..3] } \
       .map { |(t,d)| [t,d.sub(/^# /,'')] } .sort \
-      .tap { |ts| ts.each { |(t,d)|
-        t =~ /\A[a-zA-Z_:]+\z/ or raise 'invalid rake'
-      } } \
+      .filter { |(t,d)| t !~ /\A[a-zA-Z_:]+\z/ }  # TODO
   ]
   tasks   = is_admin == 'true' ? tasks_ :
               tasks_.select { |k,v| tasks_wl.include? k }
