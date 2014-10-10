@@ -6,7 +6,8 @@
   q       = -> { puts 'press return ...'; $stdin.readline }
   tasks_  = Hash[
     shc!('RAILS_ENV=production bundle exec rake -T') \
-      .stdout.lines.map { |l| l.chomp.split(/\s+/, 3)[1..3] } \
+      .stdout.lines.grep(/^rake /) \
+      .map { |l| l.chomp.split(/\s+/, 3)[1..2] } \
       .map { |(t,d)| [t,d.sub(/^# /,'')] } .sort \
       .select { |(t,d)| t =~ /\A[a-zA-Z_:]+\z/ }  # TODO
   ]
