@@ -165,7 +165,7 @@ choices:
           eval:         eval_whenever
           code: |
             osh! 'RAILS_ENV=production bundle exec whenever ' +
-                 '--update-crontab "$1"', app; q[]
+                 '--update-crontab "$1"', app, chdir: appdir; q[]
           then: *_menu_commands_<%= i %>
                                                                 # }}}1
 
